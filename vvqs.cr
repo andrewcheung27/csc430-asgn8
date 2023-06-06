@@ -114,4 +114,10 @@ restr_ids = ["where", ":=", "if", "else", "=>"]
 #####################
 
 def interp(exp : ExprC, env : Environment)
+    case exp
+    when NumC
+        NumV.new(exp.num)
+    else
+        raise Exception.new("could not interp " + exp)
+    end
 end
