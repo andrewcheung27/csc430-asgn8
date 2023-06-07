@@ -18,6 +18,9 @@ class NumC < ExprC
     def initialize(num : Int64)
         @num = num
     end
+    def to_s(io : IO) 
+        io << "NumC(#{num})"
+    end
 end
 # identifier (symbols have to start with a colon in this language, so we're using strings instead)
 class IdC < ExprC
@@ -26,6 +29,9 @@ class IdC < ExprC
     def initialize(id : String)
         @id = id
     end
+    def to_s(io : IO) 
+        io << "IdC(#{id})"
+    end
 end
 # string
 class StrC < ExprC
@@ -33,6 +39,9 @@ class StrC < ExprC
     getter str
     def initialize(str : String)
         @str = str
+    end
+    def to_s(io : IO) 
+        io << "StrC(#{str})"
     end
 end
 # conditional
@@ -48,6 +57,9 @@ class IfC < ExprC
         @test = test
         @els = els
     end
+    def to_s(io : IO) 
+        io << "IfC(#{exp} #{test} #{els})"
+    end
 end
 # function definition
 class LamC < ExprC
@@ -59,6 +71,9 @@ class LamC < ExprC
         @params = params
         @body = body
     end
+    def to_s(io : IO) 
+        io << "LamC(#{params} #{body})"
+    end
 end
 # function application
 class AppC < ExprC
@@ -69,6 +84,9 @@ class AppC < ExprC
     def initialize(func : IdC, args : Array(ExprC))
         @func = func
         @args = args
+    end
+    def to_s(io : IO) 
+        io << "AppC(#{func} #{args})"
     end
 end
 
@@ -86,6 +104,9 @@ class NumV < ExprV
     def initialize(num : Int64)
         @num = num
     end
+    def to_s(io : IO) 
+        io << "NumV(#{num})"
+    end
 end
 # bool
 class BoolV < ExprV
@@ -93,6 +114,9 @@ class BoolV < ExprV
     getter bool
     def initialize(bool : Bool)
         @bool = bool
+    end
+    def to_s(io : IO) 
+        io << "BoolV(#{bool})"
     end
 end
 # str
@@ -102,6 +126,9 @@ class StrV < ExprV
     def initialize(str : String)
         @str = str
     end
+    def to_s(io : IO) 
+        io << "StrV(#{str})"
+    end    
 end
 # closure
 class CloV < ExprV
@@ -116,6 +143,9 @@ class CloV < ExprV
         @body = body
         @env = env
     end
+    def to_s(io : IO) 
+        io << "CloV(#{params} #{body} #{env})"
+    end
 end
 # primitive operator
 class PrimV < ExprV
@@ -123,6 +153,9 @@ class PrimV < ExprV
     getter op
     def initialize(op : String)
         @op = op
+    end
+    def to_s(io : IO) 
+        io << "PrimV(#{op})"
     end
 end
 
@@ -138,6 +171,9 @@ class Binding
         @name = name
         @val = val
     end
+    def to_s(io : IO) 
+        io << "Binding(#{name} #{val})"
+    end
 end
 # environment has a list of Bindings
 class Environment
@@ -145,6 +181,9 @@ class Environment
     getter bindings
     def initialize(bindings : Array(Binding))
         @bindings = bindings
+    end
+    def to_s(io : IO) 
+        io << "Environment(#{bindings})"
     end
 end
 
@@ -163,31 +202,25 @@ top_env = Environment.new([
 # these can't be used as identifiers
 restr_ids = ["where", ":=", "if", "else", "=>"]
 
-
-
-
-
 #####################
 ##
 ## interp
 ##
 #####################
 
+# Interpret ExprC to an ExprV (Converts AST to a Value) 
 def interp(exp : ExprC, env : Environment)
     case exp
     when NumC
         NumV.new(exp.num)
     when StrC
         StrV.new(exp.str)
+    when IdC
+        lookup(exp.id, env)
     else
         raise Exception.new("could not interp " + exp)
     end
 end
-
-
-
-
-
 
 
 
@@ -197,9 +230,21 @@ end
 ##
 #####################
 
-
-
-
+# Looks up the value of an IdC in the environment 
+def lookup(id : String, env : Environment) : ExprV   
+    if env.bindings.size() == 0
+        raise Exception.new("VVQS #{id} name not found")
+    end
+    index = 0
+    while index < env.bindings.size()
+        binding = env.bindings[index]
+        if binding.name.id == id
+            return binding.val
+        end
+        index += 1
+    end
+    raise Exception.new("VVQS #{id} name not found")
+end
 
 #####################
 ##
@@ -207,7 +252,11 @@ end
 ##
 #####################
 
-
 # need #to_s method to display as strings
 # print(interp(NumC.new(69), top_env))
 # print(interp(StrC.new("vvqs"), top_env))
+# puts interp(StrC.new("vvqs"), top_env).to_s()
+# puts interp(NumC.new(10), top_env).to_s()
+# puts lookup(IdC.new("+"), top_env)
+# puts lookup(IdC.new("-"), top_env)
+# print(interp(IdC.new("+"), top_env))
