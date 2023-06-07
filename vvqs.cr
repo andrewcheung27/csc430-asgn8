@@ -13,32 +13,62 @@ class ExprC
 end
 # num
 class NumC < ExprC
-    def initialize(@num : Integer)
+    @num : Int64
+    getter num
+    def initialize(num : Int64)
+        @num = num
     end
 end
 # identifier (symbols have to start with a colon in this language, so we're using strings instead)
 class IdC < ExprC
-    def initialize(@id : String)
+    @id : String
+    getter id
+    def initialize(id : String)
+        @id = id
     end
 end
 # string
 class StrC < ExprC
-    def initialize(@str : String)
+    @str : String
+    getter str
+    def initialize(str : String)
+        @str = str
     end
 end
 # conditional
 class IfC < ExprC
-    def initialize(@do : ExprC, @test : ExprC, @els : ExprC)
+    @exp : ExprC
+    @test : ExprC
+    @els : ExprC
+    getter exp
+    getter test
+    getter els
+    def initialize(exp : ExprC, test : ExprC, els : ExprC)
+        @exp = exp
+        @test = test
+        @els = els
     end
 end
 # function definition
 class LamC < ExprC
-    def initialize(@do : Array(IdC), @body : ExprC)
+    @params : Array(IdC)
+    @body : ExprC
+    getter params
+    getter body
+    def initialize(params : Array(IdC), body : ExprC)
+        @params = params
+        @body = body
     end
 end
 # function application
 class AppC < ExprC
-    def initialize(@func : IdC, @args : Array(ExprC))
+    @func : IdC
+    @args : Array(ExprC)
+    getter func
+    getter args
+    def initialize(func : IdC, args : Array(ExprC))
+        @func = func
+        @args = args
     end
 end
 
@@ -51,27 +81,48 @@ class ExprV
 end
 # num
 class NumV < ExprV
-    def initialize(@num : Integer)
+    @num : Int64
+    getter num
+    def initialize(num : Int64)
+        @num = num
     end
 end
 # bool
 class BoolV < ExprV
-    def initialize(@bool : Bool)
+    @bool : Bool
+    getter bool
+    def initialize(bool : Bool)
+        @bool = bool
     end
 end
 # str
 class StrV < ExprV
-    def initialize(@str : String)
+    @str : String
+    getter str
+    def initialize(str : String)
+        @str = str
     end
 end
 # closure
 class CloV < ExprV
-    def initialize(@params : Array(IdC), @body : ExprC, @env : Environment)
+    @params : Array(IdC)
+    @body : ExprC
+    @env : Environment
+    getter params
+    getter body
+    getter env
+    def initialize(params : Array(IdC), body : ExprC, env : Environment)
+        @params = params
+        @body = body
+        @env = env
     end
 end
 # primitive operator
 class PrimV < ExprV
-    def initialize(@op : String)
+    @op : String
+    getter op
+    def initialize(op : String)
+        @op = op
     end
 end
 
@@ -79,12 +130,21 @@ end
 
 # binding between an identifer and an ExprV
 class Binding
-    def initialize(@name : IdC, @val : ExprV)
+    @name : IdC
+    @val : ExprV
+    getter name
+    getter val
+    def initialize(name : IdC, val : ExprV)
+        @name = name
+        @val = val
     end
 end
 # environment has a list of Bindings
 class Environment
-    def initialize(@bindings : Array(Binding))
+    @bindings : Array(Binding)
+    getter bindings
+    def initialize(bindings : Array(Binding))
+        @bindings = bindings
     end
 end
 
@@ -117,7 +177,37 @@ def interp(exp : ExprC, env : Environment)
     case exp
     when NumC
         NumV.new(exp.num)
+    when StrC
+        StrV.new(exp.str)
     else
         raise Exception.new("could not interp " + exp)
     end
 end
+
+
+
+
+
+
+
+
+#####################
+##
+## helper functions
+##
+#####################
+
+
+
+
+
+#####################
+##
+## test cases
+##
+#####################
+
+
+# need #to_s method to display as strings
+# print(interp(NumC.new(69), top_env))
+# print(interp(StrC.new("vvqs"), top_env))
