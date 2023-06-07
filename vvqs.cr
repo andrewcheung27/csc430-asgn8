@@ -205,6 +205,10 @@ top_env = Environment.new([
 # these can't be used as identifiers
 restr_ids = ["where", ":=", "if", "else", "=>"]
 
+
+
+
+
 #####################
 ##
 ## interp
@@ -212,11 +216,10 @@ restr_ids = ["where", ":=", "if", "else", "=>"]
 #####################
 
 # Interpret ExprC to an ExprV (Converts AST to a Value) 
-def interp(exp : ExprC, env : Environment)
+def interp(exp : ExprC, env : Environment) : ExprV
     case exp
     when NumC
         return NumV.new(exp.num)
-
     when StrC
         return StrV.new(exp.str)
     when IdC
@@ -237,6 +240,39 @@ def interp(exp : ExprC, env : Environment)
 
     else
         raise Exception.new("VVQS: could not interp " + exp)
+    end
+end
+
+
+
+
+
+
+#####################
+##
+## serialize
+##
+#####################
+
+# serialize converts an ExprV to a String
+def serialize(val : ExprV) : String
+    case val
+    when NumV
+        return val.num.to_s
+    when BoolV
+        if val.bool
+            return "true"
+        else
+            return "false"
+        end
+    when StrV
+        return val.str
+    when CloV
+        return "#<procedure>"
+    when PrimV
+        return "#<primop>"
+    else 
+        raise Exception.new("VVQS: could not serialize " + val)
     end
 end
 
@@ -265,6 +301,10 @@ def lookup(id : String, env : Environment) : ExprV
     end
     raise Exception.new("VVQS #{id} name not found")
 end
+
+
+
+
 
 #####################
 ##
