@@ -37,16 +37,16 @@ class StrC < ExprC
 end
 # conditional
 class IfC < ExprC
-    @exp : ExprC
+    @if_true : ExprC
     @test : ExprC
-    @els : ExprC
-    getter exp
+    @if_false : ExprC
+    getter if_true
     getter test
-    getter els
-    def initialize(exp : ExprC, test : ExprC, els : ExprC)
-        @exp = exp
+    getter if_false
+    def initialize(if_true : ExprC, test : ExprC, if_false : ExprC)
+        @if_true = if_true
         @test = test
-        @els = els
+        @if_false = if_false
     end
 end
 # function definition
@@ -176,16 +176,28 @@ restr_ids = ["where", ":=", "if", "else", "=>"]
 def interp(exp : ExprC, env : Environment)
     case exp
     when NumC
-        NumV.new(exp.num)
+        return NumV.new(exp.num)
+
     when StrC
-        StrV.new(exp.str)
+        return StrV.new(exp.str)
+
+    when IfC
+        test_interped = interp(exp.test, env)
+        if !exp.is_a?(BoolV)
+            raise Exception.new("VVQS: test was not a boolean at conditional " + exp)
+        elsif test_interped
+            return interp(exp.if_true, env)
+        else
+            return interp(exp.if_false, env)
+        end
+
+    when LamC
+        return CloV.new(exp.args, exp.body, env)
+
     else
-        raise Exception.new("could not interp " + exp)
+        raise Exception.new("VVQS: could not interp " + exp)
     end
 end
-
-
-
 
 
 
