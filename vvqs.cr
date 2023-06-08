@@ -91,8 +91,6 @@ class AppC < ExprC
     end
 end
 
-
-
 # ExprVs inherit from this
 class ExprV
     def initialize()
@@ -100,11 +98,14 @@ class ExprV
 end
 # num
 class NumV < ExprV
-    @num : Int32
+    @num : Int64
     getter num
-    def initialize(num : Int32)
+    def initialize(num : Int64)
         @num = num
     end
+    def ==(other)
+        other.is_a?(NumV) && other.num == @num
+      end
     def to_s(io : IO) 
         io << "NumV(#{num})"
     end
@@ -116,6 +117,9 @@ class BoolV < ExprV
     def initialize(bool : Bool)
         @bool = bool
     end
+    def ==(other)
+        other.is_a?(BoolV) && other.bool == @bool
+      end
     def to_s(io : IO) 
         io << "BoolV(#{bool})"
     end
@@ -127,6 +131,9 @@ class StrV < ExprV
     def initialize(str : String)
         @str = str
     end
+    def ==(other)
+        other.is_a?(StrV) && other.str == @str
+      end
     def to_s(io : IO) 
         io << "StrV(#{str})"
     end    
@@ -144,6 +151,12 @@ class CloV < ExprV
         @body = body
         @env = env
     end
+    def ==(other)
+        other.is_a?(CloV) &&
+          other.params == @params &&
+          other.body == @body &&
+          other.env == @env
+      end
     def to_s(io : IO) 
         io << "CloV(#{params} #{body} #{env})"
     end
@@ -155,10 +168,14 @@ class PrimV < ExprV
     def initialize(op : String)
         @op = op
     end
+    def ==(other)
+        other.is_a?(PrimV) && other.op == @op
+      end
     def to_s(io : IO) 
         io << "PrimV(#{op})"
     end
 end
+
 
 
 
