@@ -10,8 +10,17 @@ describe "interp" do
     result.should eq(NumV.new(42))
   end
 end
-require "spec"
-require "./Assgn9"
+
+  it "looks up/matches an IdC expression in the environment" do
+    env = Environment.new([
+      Binding.new(IdC.new("x"), NumV.new(10)),
+      Binding.new(IdC.new("y"), StrV.new("Cat")), 
+      Binding.new(IdC.new("z"), NumV.new(30))
+    ] of Binding)
+    exp = IdC.new("x")
+    result = interp(exp, env)
+    result.should eq(NumV.new(10))
+  end
 
   it "interprets a StrC expression" do 
     env = Environment.new([] of Binding)
