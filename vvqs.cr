@@ -64,11 +64,11 @@ class IfC < ExprC
 end
 # function definition
 class LamC < ExprC
-    @params : Array(IdC)
+    @params : Array(String)
     @body : ExprC
     getter params
     getter body
-    def initialize(params : Array(IdC), body : ExprC)
+    def initialize(params : Array(String), body : ExprC)
         @params = params
         @body = body
     end
@@ -93,7 +93,7 @@ end
 
 
 
-# ExprVs inherit from this
+# ExprV inherit from this
 class ExprV
     def initialize()
     end
@@ -105,7 +105,7 @@ class NumV < ExprV
     def initialize(num : Int32)
         @num = num
     end
-    def ==(other)
+    def == (other)
         other.is_a?(NumV) && other.num == @num
     end
     def to_s(io : IO) 
@@ -142,13 +142,13 @@ class StrV < ExprV
 end
 # closure
 class CloV < ExprV
-    @params : Array(IdC)
+    @params : Array(String)
     @body : ExprC
     @env : Environment
     getter params
     getter body
     getter env
-    def initialize(params : Array(IdC), body : ExprC, env : Environment)
+    def initialize(params : Array(String), body : ExprC, env : Environment)
         @params = params
         @body = body
         @env = env
@@ -180,13 +180,13 @@ end
 
 
 
-# binding between an identifer and an ExprV
+# binding between an identifer and a ExprV
 class Binding
-    @name : IdC
+    @name : String
     @val : ExprV
     getter name
     getter val
-    def initialize(name : IdC, val : ExprV)
+    def initialize(name : String, val : ExprV)
         @name = name
         @val = val
     end
@@ -208,15 +208,15 @@ end
 
 # top-level environment
 top_env = Environment.new([
-    Binding.new(IdC.new("+"), PrimV.new("+")), 
-    Binding.new(IdC.new("-"), PrimV.new("-")), 
-    Binding.new(IdC.new("*"), PrimV.new("*")), 
-    Binding.new(IdC.new("/"), PrimV.new("/")), 
-    Binding.new(IdC.new("<="), PrimV.new("<=")), 
-    Binding.new(IdC.new("equal?"), PrimV.new("equal?")), 
-    Binding.new(IdC.new("true"), BoolV.new(true)), 
-    Binding.new(IdC.new("false"), BoolV.new(false)), 
-    Binding.new(IdC.new("error"), PrimV.new("error"))
+    Binding.new("+", PrimV.new("+")), 
+    Binding.new("-", PrimV.new("-")), 
+    Binding.new("*", PrimV.new("*")), 
+    Binding.new("/", PrimV.new("/")), 
+    Binding.new("<=", PrimV.new("<=")), 
+    Binding.new("equal?", PrimV.new("equal?")), 
+    Binding.new("true", BoolV.new(true)), 
+    Binding.new("false", BoolV.new(false)), 
+    Binding.new("error", PrimV.new("error"))
 ])
 
 # a Hash mapping strings to their operators
@@ -239,7 +239,7 @@ restr_ids = ["where", ":=", "if", "else", "=>"]
 ##
 #####################
 
-# Interpret ExprC to an ExprV (Converts AST to a Value) 
+# Interpret ExprC to an ExprV (Converts AST to a ExprV) 
 def interp(exp : ExprC, env : Environment) : ExprV
     case exp
     when NumC
@@ -262,12 +262,36 @@ def interp(exp : ExprC, env : Environment) : ExprV
     when LamC
         return CloV.new(exp.args, exp.body, env)
 
+    when AppC
+        appC_result = interp(exp.func, env)
+        case appC_result
+        when CloV
+            index = 0
+            arg_ExprVs = [] of ExprV
+            while index < exp.args.size()
+                arg_ExprVs << interp(exp.args[index], env)
+            end
+            if arg_ExprVs.size() == exp.params.size()
+                newCloEnv = update_env(exp.params, arg_ExprVs, appC_result.env)
+                return (interp appC_result.body newCloEnv)
+            else
+                raise Exception.new("VVQS: incorrect number of arguments to function " + exp.func)
+            end
+
+        when PrimV
+            index = 0
+            arg_ExprVs = [] of ExprV
+            while index < exp.args.size()
+                arg_ExprVs << interp(exp.args[index], env)
+            end
+            return interp_prim(appC_result.op, arg_ExprVs)
+        else
+            raise Exception.new("VVQS: function position must be a closure or primitive, received " + exp.func)
+        end
     else
         raise Exception.new("VVQS: could not interp " + exp)
     end
 end
-
-
 
 
 
@@ -310,7 +334,7 @@ end
 ##
 #####################
 
-# Looks up the value of an IdC in the environment 
+# Looks up the ExprV of an IdC in the environment 
 def lookup(id : String, env : Environment) : ExprV   
     if env.bindings.size() == 0
         raise Exception.new("VVQS #{id} name not found")
@@ -324,6 +348,15 @@ def lookup(id : String, env : Environment) : ExprV
         index += 1
     end
     raise Exception.new("VVQS #{id} name not found")
+end
+
+
+def update_env(params : Array(String), args : Array(ExprV), env : Environment) : Environment
+    index = 0
+    while index < params.size()
+        env.bindings << Binding.new(params[0], args[0])
+    end
+    return env
 end
 
 
@@ -341,29 +374,29 @@ end
 # interp-prim takes a primitive operator and its arguments, 
 # returns the Value of the operator applied to the args, 
 # or an error if there is the wrong number of args or an arg is the wrong type
-def interp_prim(op : IdC, args : Array(ExprV)) : ExprV
+def interp_prim(op : String, args : Array(ExprV)) : ExprV
     # covers +, -, *, /, and <=
-    if two_arg_primops.has_key?(op.id)
+    if two_arg_primops.has_key?(op)
         if args.size() > 2
-            raise Exception.new("VVQS: " + op.id + " applied with more than two args")
+            raise Exception.new("VVQS: " + op + " applied with more than two args")
         end
         if args.size() < 2
-            raise Exception.new("VVQS: " + op.id + " applied with less than two args")
+            raise Exception.new("VVQS: " + op + " applied with less than two args")
         end
         if !args[0].is_a?(NumV) | !args[1].is_a?(NumV)
-            raise Exception.new("VVQS: " + op.id + " applied with a non-num arg")
+            raise Exception.new("VVQS: " + op + " applied with a non-num arg")
         end
-        return two_arg_primops[op.id].call(args[0].num, args[1].num)
+        return two_arg_primops[op].call(args[0].num, args[1].num)
     else
-        raise Exception.new("VVQS: invalid primitive operator '" + op.id + "'")
+        raise Exception.new("VVQS: invalid primitive operator '" + op + "'")
     end
 
-    if op.id == "equal?"
+    if op == "equal?"
         if args.size() > 2
-            raise Exception.new("VVQS: " + op.id + " applied with more than two args")
+            raise Exception.new("VVQS: " + op + " applied with more than two args")
         end
         if args.size() < 2
-            raise Exception.new("VVQS: " + op.id + " applied with less than two args")
+            raise Exception.new("VVQS: " + op + " applied with less than two args")
         end
         # return true if neither arg is a CloV or PrimV, and they are equal
         # this line is super long, I'm not sure how to split it into two lines
