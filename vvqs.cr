@@ -4,8 +4,6 @@
 ##
 #####################
 
-
-
 # ExprCs inherit from this
 class ExprC
     def initialize()
@@ -13,9 +11,9 @@ class ExprC
 end
 # num
 class NumC < ExprC
-    @num : Int64
+    @num : Int32
     getter num
-    def initialize(num : Int64)
+    def initialize(num : Int32)
         @num = num
     end
     def to_s(io : IO) 
@@ -102,9 +100,9 @@ class ExprV
 end
 # num
 class NumV < ExprV
-    @num : Int64
+    @num : Int32
     getter num
-    def initialize(num : Int64)
+    def initialize(num : Int32)
         @num = num
     end
     def to_s(io : IO) 
@@ -202,6 +200,14 @@ top_env = Environment.new([
     Binding.new(IdC.new("false"), BoolV.new(false)), 
     Binding.new(IdC.new("error"), PrimV.new("error"))
 ])
+
+# a Hash mapping strings to their operators
+two_arg_primops = {
+    "+" => ->(l : Int32, r : Int32) {l + r}, 
+    "-" => ->(l : Int32, r : Int32) {l - r},
+    "*" => ->(l : Int32, r : Int32) {l * r},
+    "/" => ->(l : Int32, r : Int32) {vvqs_division(l, r)}, 
+    "<=" => ->(l : Int32, r : Int32) {l <= r}}
 # these can't be used as identifiers
 restr_ids = ["where", ":=", "if", "else", "=>"]
 
@@ -272,7 +278,7 @@ def serialize(val : ExprV) : String
     when PrimV
         return "#<primop>"
     else 
-        raise Exception.new("VVQS: could not serialize " + val)
+        raise Exception.new("VVQS: could not serialize " + val.to_s())
     end
 end
 
@@ -304,6 +310,52 @@ end
 
 
 
+# vvqs_division divides two nums, converts the result to an integer, raises an error if denominator is zero
+def vvqs_division(l : Int32, r : Int32) : Int32
+    if r == 0
+        raise Exception.new("VVQS: division by zero: " + l.to_s() + " / " + r.to_s())
+    else (l / r).to_i()
+    end
+end
+
+
+
+# interp-prim takes a primitive operator and its arguments, 
+# returns the Value of the operator applied to the args, 
+# or an error if there is the wrong number of args or an arg is the wrong type
+def interp_prim(op : IdC, args : Array(ExprV)) : ExprV
+    # covers +, -, *, /, and <=
+    if two_arg_primops.has_key?(op.id)
+        if args.size() > 2
+            raise Exception.new("VVQS: " + op.id + " applied with more than two args")
+        end
+        if args.size() < 2
+            raise Exception.new("VVQS: " + op.id + " applied with less than two args")
+        end
+        if !args[0].is_a?(NumV) | !args[1].is_a?(NumV)
+            raise Exception.new("VVQS: " + op.id + " applied with a non-num arg")
+        end
+        return two_arg_primops[op.id].call(args[0].num, args[1].num)
+    else
+        raise Exception.new("VVQS: invalid primitive operator '" + op.id + "'")
+    end
+
+    if op.id == "equal?"
+        if args.size() > 2
+            raise Exception.new("VVQS: " + op.id + " applied with more than two args")
+        end
+        if args.size() < 2
+            raise Exception.new("VVQS: " + op.id + " applied with less than two args")
+        end
+        # return true if neither arg is a CloV or PrimV, and they are equal
+        # this line is super long, I'm not sure how to split it into two lines
+        return !args[0].is_a?(CloV) & !args[1].is_a?(CloV) & !args[0].is_a?(PrimV) & !args[1].is_a?(PrimV) & args[0] == args[1]
+        
+    end
+end
+
+
+
 
 
 #####################
@@ -320,3 +372,5 @@ end
 # puts lookup(IdC.new("+"), top_env)
 # puts lookup(IdC.new("-"), top_env)
 # print(interp(IdC.new("+"), top_env))
+
+puts(serialize(interp(NumC.new(69), top_env)))
