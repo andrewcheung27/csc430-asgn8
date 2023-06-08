@@ -105,7 +105,7 @@ class NumV < ExprV
     def initialize(num : Int32)
         @num = num
     end
-    def ==(other)
+    def == (other)
         other.is_a?(NumV) && other.num == @num
     end
     def to_s(io : IO) 
@@ -269,7 +269,7 @@ def interp(exp : ExprC, env : Environment) : ExprV
             index = 0
             arg_ExprVs = [] of ExprV
             while index < exp.args.size()
-                arg_ExprVs << interp(exp.args[i], env)
+                arg_ExprVs << interp(exp.args[index], env)
             end
             if arg_ExprVs.size() == exp.params.size()
                 newCloEnv = update_env(exp.params, arg_ExprVs, appC_result.env)
@@ -282,7 +282,7 @@ def interp(exp : ExprC, env : Environment) : ExprV
             index = 0
             arg_ExprVs = [] of ExprV
             while index < exp.args.size()
-                arg_ExprVs << interp(exp.args[i], env)
+                arg_ExprVs << interp(exp.args[index], env)
             end
             return interp_prim(appC_result.op, arg_ExprVs)
         else
@@ -355,6 +355,7 @@ def update_env(params : Array(String), args : Array(ExprV), env : Environment) :
     index = 0
     while index < params.size()
         env.bindings << Binding.new(params[0], args[0])
+    end
     return env
 end
 
@@ -373,29 +374,29 @@ end
 # interp-prim takes a primitive operator and its arguments, 
 # returns the Value of the operator applied to the args, 
 # or an error if there is the wrong number of args or an arg is the wrong type
-def interp_prim(op : IdC, args : Array(ExprV)) : ExprV
+def interp_prim(op : String, args : Array(ExprV)) : ExprV
     # covers +, -, *, /, and <=
-    if two_arg_primops.has_key?(op.id)
+    if two_arg_primops.has_key?(op)
         if args.size() > 2
-            raise Exception.new("VVQS: " + op.id + " applied with more than two args")
+            raise Exception.new("VVQS: " + op + " applied with more than two args")
         end
         if args.size() < 2
-            raise Exception.new("VVQS: " + op.id + " applied with less than two args")
+            raise Exception.new("VVQS: " + op + " applied with less than two args")
         end
         if !args[0].is_a?(NumV) | !args[1].is_a?(NumV)
-            raise Exception.new("VVQS: " + op.id + " applied with a non-num arg")
+            raise Exception.new("VVQS: " + op + " applied with a non-num arg")
         end
-        return two_arg_primops[op.id].call(args[0].num, args[1].num)
+        return two_arg_primops[op].call(args[0].num, args[1].num)
     else
-        raise Exception.new("VVQS: invalid primitive operator '" + op.id + "'")
+        raise Exception.new("VVQS: invalid primitive operator '" + op + "'")
     end
 
-    if op.id == "equal?"
+    if op == "equal?"
         if args.size() > 2
-            raise Exception.new("VVQS: " + op.id + " applied with more than two args")
+            raise Exception.new("VVQS: " + op + " applied with more than two args")
         end
         if args.size() < 2
-            raise Exception.new("VVQS: " + op.id + " applied with less than two args")
+            raise Exception.new("VVQS: " + op + " applied with less than two args")
         end
         # return true if neither arg is a CloV or PrimV, and they are equal
         # this line is super long, I'm not sure how to split it into two lines
