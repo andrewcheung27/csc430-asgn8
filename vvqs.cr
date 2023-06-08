@@ -78,7 +78,7 @@ class LamC < ExprC
 end
 # function application
 class AppC < ExprC
-    @func : IdC
+    @func : Id
     @args : Array(ExprC)
     getter func
     getter args
@@ -252,7 +252,7 @@ def interp(exp : ExprC, env : Environment) : ExprV
     when IfC
         test_interped = interp(exp.test, env)
         if !exp.is_a?(BoolV)
-            raise Exception.new("VVQS: test was not a boolean at conditional " + exp)
+            raise Exception.new("VVQS: test was not a boolean at conditional " + exp.to_s())
         elsif test_interped
             return interp(exp.if_true, env)
         else
@@ -260,7 +260,7 @@ def interp(exp : ExprC, env : Environment) : ExprV
         end
 
     when LamC
-        return CloV.new(exp.args, exp.body, env)
+        return CloV.new(exp.params, exp.body, env)
 
     when AppC
         appC_result = interp(exp.func, env)
@@ -271,11 +271,11 @@ def interp(exp : ExprC, env : Environment) : ExprV
             while index < exp.args.size()
                 arg_ExprVs << interp(exp.args[index], env)
             end
-            if arg_ExprVs.size() == exp.params.size()
-                newCloEnv = update_env(exp.params, arg_ExprVs, appC_result.env)
-                return (interp appC_result.body newCloEnv)
+            if arg_ExprVs.size() == appC_result.params.size()
+                newCloEnv = update_env(appC_result.params, arg_ExprVs, appC_result.env)
+                return interp(appC_result.body, newCloEnv)
             else
-                raise Exception.new("VVQS: incorrect number of arguments to function " + exp.func)
+                raise Exception.new("VVQS: incorrect number of arguments to function " + exp.func.to_s())
             end
 
         when PrimV
@@ -286,10 +286,10 @@ def interp(exp : ExprC, env : Environment) : ExprV
             end
             return interp_prim(appC_result.op, arg_ExprVs)
         else
-            raise Exception.new("VVQS: function position must be a closure or primitive, received " + exp.func)
+            raise Exception.new("VVQS: function position must be a closure or primitive, received " + exp.func.to_s())
         end
     else
-        raise Exception.new("VVQS: could not interp " + exp)
+        raise Exception.new("VVQS: could not interp " + exp.to_s())
     end
 end
 
@@ -421,7 +421,7 @@ end
 # puts interp(StrC.new("vvqs"), top_env).to_s()
 # puts interp(NumC.new(10), top_env).to_s()
 # puts lookup(IdC.new("+"), top_env)
-puts lookup("-", top_env)
+#puts lookup("-", top_env)
 # print(interp(IdC.new("+"), top_env))
 
-puts(serialize(interp(NumC.new(69), top_env)))
+#puts(serialize(interp(NumC.new(69), top_env)))
