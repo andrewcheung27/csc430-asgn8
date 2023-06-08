@@ -95,13 +95,13 @@ end
 
 
 
-# Value inherit from this
-class Value
+# ExprV inherit from this
+class ExprV
     def initialize()
     end
 end
 # num
-class NumV < Value
+class NumV < ExprV
     @num : Int64
     getter num
     def initialize(num : Int64)
@@ -112,7 +112,7 @@ class NumV < Value
     end
 end
 # bool
-class BoolV < Value
+class BoolV < ExprV
     @bool : Bool
     getter bool
     def initialize(bool : Bool)
@@ -123,7 +123,7 @@ class BoolV < Value
     end
 end
 # str
-class StrV < Value
+class StrV < ExprV
     @str : String
     getter str
     def initialize(str : String)
@@ -134,7 +134,7 @@ class StrV < Value
     end    
 end
 # closure
-class CloV < Value
+class CloV < ExprV
     @params : Array(String)
     @body : ExprC
     @env : Environment
@@ -151,7 +151,7 @@ class CloV < Value
     end
 end
 # primitive operator
-class PrimV < Value
+class PrimV < ExprV
     @op : String
     getter op
     def initialize(op : String)
@@ -164,13 +164,13 @@ end
 
 
 
-# binding between an identifer and a Value
+# binding between an identifer and a ExprV
 class Binding
     @name : String
-    @val : Value
+    @val : ExprV
     getter name
     getter val
-    def initialize(name : String, val : Value)
+    def initialize(name : String, val : ExprV)
         @name = name
         @val = val
     end
@@ -215,8 +215,8 @@ restr_ids = ["where", ":=", "if", "else", "=>"]
 ##
 #####################
 
-# Interpret ExprC to an Value (Converts AST to a Value) 
-def interp(exp : ExprC, env : Environment) : Value
+# Interpret ExprC to an ExprV (Converts AST to a ExprV) 
+def interp(exp : ExprC, env : Environment) : ExprV
     case exp
     when NumC
         return NumV.new(exp.num)
@@ -243,12 +243,12 @@ def interp(exp : ExprC, env : Environment) : Value
         case appC_result
         when CloV
             index = 0
-            arg_values = [] of Value
+            arg_ExprVs = [] of ExprV
             while index < exp.args.size()
-                arg_values << interp(exp.args[i], env)
+                arg_ExprVs << interp(exp.args[i], env)
             end
-            if arg_values.size() == exp.params.size()
-                newCloEnv = update_env(exp.params, arg_values, appC_result.env)
+            if arg_ExprVs.size() == exp.params.size()
+                newCloEnv = update_env(exp.params, arg_ExprVs, appC_result.env)
                 return (interp appC_result.body newCloEnv)
             else
                 raise Exception.new("VVQS: incorrect number of arguments to function " + exp.func)
@@ -256,11 +256,11 @@ def interp(exp : ExprC, env : Environment) : Value
 
         when PrimV
             index = 0
-            arg_values = [] of Value
+            arg_ExprVs = [] of ExprV
             while index < exp.args.size()
-                arg_values << interp(exp.args[i], env)
+                arg_ExprVs << interp(exp.args[i], env)
             end
-            return interp_prim(appC_result.op, arg_values)
+            return interp_prim(appC_result.op, arg_ExprVs)
         else
             raise Exception.new("VVQS: function position must be a closure or primitive, received " + exp.func)
         end
@@ -278,8 +278,8 @@ end
 ##
 #####################
 
-# serialize converts an Value to a String
-def serialize(val : Value) : String
+# serialize converts an ExprV to a String
+def serialize(val : ExprV) : String
     case val
     when NumV
         return val.num.to_s
@@ -310,8 +310,8 @@ end
 ##
 #####################
 
-# Looks up the value of an IdC in the environment 
-def lookup(id : String, env : Environment) : Value   
+# Looks up the ExprV of an IdC in the environment 
+def lookup(id : String, env : Environment) : ExprV   
     if env.bindings.size() == 0
         raise Exception.new("VVQS #{id} name not found")
     end
@@ -327,7 +327,7 @@ def lookup(id : String, env : Environment) : Value
 end
 
 
-def update_env(params : Array(String), args : Array(Value), env : Environment) : Environment
+def update_env(params : Array(String), args : Array(ExprV), env : Environment) : Environment
     index = 0
     while index < params.size()
         env.bindings << Binding.new(params[0], args[0])
