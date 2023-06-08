@@ -40,4 +40,17 @@ end
         result = serialize(value)
         result.should eq("true")
     end
+    it "serializes a CloV" do
+        params = ["x", "y"]
+        body = NumC.new(42)
+        env = Environment.new([] of Binding)
+        cloVee = CloV.new(params, body, env)
+        result = serialize(cloVee)
+        result.should eq("#<procedure>")
+    end
+    it "serializes a PrimV" do 
+        value = PrimV.new("add")
+        result = serialize(value)
+        result.should eq("#<primop>")
+    end
 end
