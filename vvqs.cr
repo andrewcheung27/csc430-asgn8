@@ -271,7 +271,7 @@ def interp(exp : ExprC, env : Environment) : ExprV
             while index < exp.args.size()
                 arg_ExprVs << interp(exp.args[index], env)
             end
-            if arg_ExprVs.size() == exp.params.size()
+            if arg_ExprVs.size() == appC_result.params.size()
                 newCloEnv = update_env(exp.params, arg_ExprVs, appC_result.env)
                 return (interp appC_result.body newCloEnv)
             else
