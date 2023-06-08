@@ -342,7 +342,7 @@ def lookup(id : String, env : Environment) : ExprV
     index = 0
     while index < env.bindings.size()
         binding = env.bindings[index]
-        if binding.name.id == id
+        if binding.name == id
             return binding.val
         end
         index += 1
@@ -421,7 +421,7 @@ end
 # puts interp(StrC.new("vvqs"), top_env).to_s()
 # puts interp(NumC.new(10), top_env).to_s()
 # puts lookup(IdC.new("+"), top_env)
-# puts lookup(IdC.new("-"), top_env)
+puts lookup("-", top_env)
 # print(interp(IdC.new("+"), top_env))
 
 puts(serialize(interp(NumC.new(69), top_env)))
