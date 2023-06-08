@@ -66,11 +66,11 @@ class IfC < ExprC
 end
 # function definition
 class LamC < ExprC
-    @params : Array(IdC)
+    @params : Array(String)
     @body : ExprC
     getter params
     getter body
-    def initialize(params : Array(IdC), body : ExprC)
+    def initialize(params : Array(String), body : ExprC)
         @params = params
         @body = body
     end
@@ -95,13 +95,13 @@ end
 
 
 
-# ExprVs inherit from this
-class ExprV
+# Value inherit from this
+class Value
     def initialize()
     end
 end
 # num
-class NumV < ExprV
+class NumV < Value
     @num : Int64
     getter num
     def initialize(num : Int64)
@@ -112,7 +112,7 @@ class NumV < ExprV
     end
 end
 # bool
-class BoolV < ExprV
+class BoolV < Value
     @bool : Bool
     getter bool
     def initialize(bool : Bool)
@@ -123,7 +123,7 @@ class BoolV < ExprV
     end
 end
 # str
-class StrV < ExprV
+class StrV < Value
     @str : String
     getter str
     def initialize(str : String)
@@ -134,14 +134,14 @@ class StrV < ExprV
     end    
 end
 # closure
-class CloV < ExprV
-    @params : Array(IdC)
+class CloV < Value
+    @params : Array(String)
     @body : ExprC
     @env : Environment
     getter params
     getter body
     getter env
-    def initialize(params : Array(IdC), body : ExprC, env : Environment)
+    def initialize(params : Array(String), body : ExprC, env : Environment)
         @params = params
         @body = body
         @env = env
@@ -151,7 +151,7 @@ class CloV < ExprV
     end
 end
 # primitive operator
-class PrimV < ExprV
+class PrimV < Value
     @op : String
     getter op
     def initialize(op : String)
@@ -164,13 +164,13 @@ end
 
 
 
-# binding between an identifer and an ExprV
+# binding between an identifer and a Value
 class Binding
-    @name : IdC
-    @val : ExprV
+    @name : String
+    @val : Value
     getter name
     getter val
-    def initialize(name : IdC, val : ExprV)
+    def initialize(name : String, val : Value)
         @name = name
         @val = val
     end
@@ -192,15 +192,15 @@ end
 
 # top-level environment
 top_env = Environment.new([
-    Binding.new(IdC.new("+"), PrimV.new("+")), 
-    Binding.new(IdC.new("-"), PrimV.new("-")), 
-    Binding.new(IdC.new("*"), PrimV.new("*")), 
-    Binding.new(IdC.new("/"), PrimV.new("/")), 
-    Binding.new(IdC.new("<="), PrimV.new("<=")), 
-    Binding.new(IdC.new("equal?"), PrimV.new("equal?")), 
-    Binding.new(IdC.new("true"), BoolV.new(true)), 
-    Binding.new(IdC.new("false"), BoolV.new(false)), 
-    Binding.new(IdC.new("error"), PrimV.new("error"))
+    Binding.new("+", PrimV.new("+")), 
+    Binding.new("-", PrimV.new("-")), 
+    Binding.new("*", PrimV.new("*")), 
+    Binding.new("/", PrimV.new("/")), 
+    Binding.new("<=", PrimV.new("<=")), 
+    Binding.new("equal?", PrimV.new("equal?")), 
+    Binding.new("true", BoolV.new(true)), 
+    Binding.new("false", BoolV.new(false)), 
+    Binding.new("error", PrimV.new("error"))
 ])
 # these can't be used as identifiers
 restr_ids = ["where", ":=", "if", "else", "=>"]
@@ -215,8 +215,8 @@ restr_ids = ["where", ":=", "if", "else", "=>"]
 ##
 #####################
 
-# Interpret ExprC to an ExprV (Converts AST to a Value) 
-def interp(exp : ExprC, env : Environment) : ExprV
+# Interpret ExprC to an Value (Converts AST to a Value) 
+def interp(exp : ExprC, env : Environment) : Value
     case exp
     when NumC
         return NumV.new(exp.num)
@@ -238,12 +238,36 @@ def interp(exp : ExprC, env : Environment) : ExprV
     when LamC
         return CloV.new(exp.args, exp.body, env)
 
+    when AppC
+        appC_result = interp(exp.func, env)
+        case appC_result
+        when CloV
+            index = 0
+            arg_values = [] of Value
+            while index < exp.args.size()
+                arg_values << interp(exp.args[i], env)
+            end
+            if arg_values.size() == exp.params.size()
+                newCloEnv = update_env(exp.params, arg_values, appC_result.env)
+                return (interp appC_result.body newCloEnv)
+            else
+                raise Exception.new("VVQS: incorrect number of arguments to function " + exp.func)
+            end
+
+        when PrimV
+            index = 0
+            arg_values = [] of Value
+            while index < exp.args.size()
+                arg_values << interp(exp.args[i], env)
+            end
+            return interp_prim(appC_result.op, arg_values)
+        else
+            raise Exception.new("VVQS: function position must be a closure or primitive, received " + exp.func)
+        end
     else
         raise Exception.new("VVQS: could not interp " + exp)
     end
 end
-
-
 
 
 
@@ -254,8 +278,8 @@ end
 ##
 #####################
 
-# serialize converts an ExprV to a String
-def serialize(val : ExprV) : String
+# serialize converts an Value to a String
+def serialize(val : Value) : String
     case val
     when NumV
         return val.num.to_s
@@ -287,7 +311,7 @@ end
 #####################
 
 # Looks up the value of an IdC in the environment 
-def lookup(id : String, env : Environment) : ExprV   
+def lookup(id : String, env : Environment) : Value   
     if env.bindings.size() == 0
         raise Exception.new("VVQS #{id} name not found")
     end
@@ -300,6 +324,14 @@ def lookup(id : String, env : Environment) : ExprV
         index += 1
     end
     raise Exception.new("VVQS #{id} name not found")
+end
+
+
+def update_env(params : Array(String), args : Array(Value), env : Environment) : Environment
+    index = 0
+    while index < params.size()
+        env.bindings << Binding.new(params[0], args[0])
+    return env
 end
 
 
